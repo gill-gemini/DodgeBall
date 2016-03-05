@@ -1,0 +1,270 @@
+
+<!doctype html>
+<html>
+ <head>
+
+ <meta charset="utf-8" />
+ <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+ </head>
+ <body>
+   <p>Dodge Ball</p>
+
+
+ <button id="load">Load</button>
+ <button id="save">Save</button>
+
+
+
+  <canvas id="myCanvas" width="480" height="320"></canvas>
+
+   <script type="text/javascript">
+
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+
+    var score = 0;
+
+    var ballRadius = 10;
+    var x = canvas.width/2;
+    var y = canvas.height-30;
+    var dx = 3;
+    var dy = -3;
+
+    var dbx = 10;
+    var dby = -10;
+
+    var balloonRadius = 10;
+    var xb = canvas.width/3;
+    var yb = canvas.height-30;
+
+
+    var paddleHeight = 10;
+    var paddleWidth = 25;
+    var paddleX = (canvas.width-paddleWidth);
+    var rightPressed = false;
+    var leftPressed = false;
+
+
+    var dollHeight = 100;
+    var dollWidth = 45;
+    var dollX = (canvas.width-dollWidth)/480;
+
+
+
+     document.addEventListener("keydown", keyDownHandler, false);
+     document.addEventListener("keyup", keyUpHandler, false);
+     document.addEventListener("touchstart", touchDownHandler, false);
+     document.addEventListener("touchend", touchUpHandler, false);
+
+     function keyDownHandler(e) {
+         if(e.keyCode == 39) {
+             rightPressed = true;
+         }
+         else if(e.keyCode == 37) {
+             leftPressed = true;
+         }
+     }
+
+     function keyUpHandler(e) {
+         if(e.keyCode == 39) {
+             rightPressed = false;
+         }
+         else if(e.keyCode == 37) {
+             leftPressed = false;
+         }
+     }
+
+     function touchDownHandler(e) {
+          if (!e) {
+            var e = event;
+          }
+          e.preventDefault();
+          var x = e.targetTouches[0].pageX;
+          if (x < canvas.width / 2) {
+            leftPressed = true;
+          }
+          else {
+            rightPressed = true;
+          }
+     }
+     function touchUpHandler(e) {
+       leftPressed = false;
+       rightPressed = false;
+     }
+
+/*Different draw functions draw multiple elements in the game*/
+     function drawScore() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Score: "+score, 8, 20);
+    }
+
+function drawBall(radius , color , xa,ya) {
+   ctx.beginPath();
+    ctx.arc(xa, ya, radius, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.closePath();
+}
+
+
+function drawPaddle() {
+    ctx.beginPath();
+    ctx.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight);
+    ctx.fillStyle = 'orange';
+    ctx.fill();
+    ctx.closePath();
+}
+
+function drawDoll() {
+    ctx.beginPath();
+    ctx.rect(dollX, canvas.height-dollHeight, dollWidth, dollHeight);
+    ctx.fillStyle = 'pink';
+    ctx.fill();
+    ctx.closePath();
+}
+
+
+
+/*detects the collision between the paddle and the balls*/
+function collisionDetection() {
+
+            if(paddleX > dollX && paddleX < dollX +dollWidth) {
+
+              if(dollX == canvas.width-dollWidth)
+                {
+                dollX= (canvas.width-dollWidth)/480;
+
+              }
+              else {
+                  dollX= (canvas.width-dollWidth);
+
+              }
+
+
+               score++;
+            }
+}
+
+/*Sends the score to the server and displays the message of Game over*/
+function gameover(){
+
+  var msg = {
+          "messageType": "SCORE",
+          "score": score
+        };
+        window.parent.postMessage(msg, "*");
+
+          alert("GAME OVER");
+          document.location.reload();
+}
+
+/*settings for size of the box where game will be displayed*/
+var message =  {
+     messageType: "SETTING",
+     options: {
+       "width": 500, //Integer
+       "height": 450 //Integer
+       }
+   };
+   window.parent.postMessage(message, "*");
+   /*saving the game state , at the moment only score is saved*/
+   $("#save").click( function () {
+     var msg = {
+       "messageType": "SAVE",
+       "gameState": {
+         "score": score
+       }
+     };
+     window.parent.postMessage(msg, "*");
+   });
+
+   /*loading the previous saved game*/
+   $("#load").click( function () {
+       var msg = {
+         "messageType": "LOAD_REQUEST",
+       };
+       window.parent.postMessage(msg, "*");
+     });
+
+
+  /* Listen incoming messages, if the messageType
+    is LOAD then the game state will be loaded.
+    Note that no checking is done, whether the
+    gameState in the incoming message contains
+    correct information.
+
+    Also handles any errors that the service
+    wants to send (displays them as an alert).*/
+   window.addEventListener("message", function(evt) {
+     if(evt.data.messageType === "LOAD") {
+       score = evt.data.gameState.score;
+     } else if (evt.data.messageType === "ERROR") {
+       alert(evt.data.info);
+     }
+   });
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBall(ballRadius , 'blue', x,y);
+    drawBall(balloonRadius, 'green',xb,yb);
+    drawPaddle();
+
+    drawDoll();
+    drawScore();
+    collisionDetection();
+
+/*bouncing the green balll from top and bottom*/
+  if(y + dy < ballRadius)
+   {
+      dy= -dy;
+   }
+   else if (y + dy > (canvas.height-ballRadius)){
+
+    //checking if the game hits the paddle
+      if(x > paddleX && x < paddleX + paddleWidth) {
+     	gameover();
+
+        }
+        else
+        {
+        dy = -dy;
+        }
+    }
+
+/*bouncing the blue ball from top to bottom*/
+if(yb +dby < balloonRadius)
+{
+  dby= -dby;
+}
+else if(yb + dby > (canvas.height-balloonRadius)) {
+
+    //checking if the ball hits the paddle
+     if(xb > paddleX && xb < paddleX + paddleWidth ) {
+      	gameover();
+       }
+       else
+       {
+       dby = -dby;
+       }
+}
+
+  /*moving the paddle right and left , can change the speed below*/
+    if(rightPressed && paddleX < canvas.width-paddleWidth) {
+    paddleX += 7;
+    }
+    else if(leftPressed && paddleX > 0) {
+     paddleX -= 7;
+   }
+
+  /*moving the ball up and down*/
+    y += dy;
+    yb +=dby;
+}
+
+setInterval(draw, 10);
+   </script>
+ </body>
+</html>
