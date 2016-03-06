@@ -1,6 +1,6 @@
 # DodgeBall
 
-**Descrition:**
+**Description:**
 Its a simple javascript breakout game from the mozilla javascript game tutorial[1].
 
 Download the code , double click and start playing(html file). Use the left and right keys to hit the brick to max points without
